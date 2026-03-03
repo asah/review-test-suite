@@ -40,7 +40,7 @@ jobs:
           git config --global init.defaultBranch main
 
       - name: Run integration tests
-        run: pytest tests/test_scenarios.py -v --timeout=120 -x
+        run: pytest tests/test_scenarios.py -v --timeout=300 -x
         env:
           CLAUDECODE: ""
 

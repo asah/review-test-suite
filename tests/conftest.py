@@ -64,11 +64,49 @@ def build_prompt_from_skill() -> str:
     return skill.content
 
 
-def run_skill(repo_dir: Path, timeout: int = 120) -> str:
-    """Invoke the skill via `claude -p` in the given repo directory."""
-    prompt = build_prompt_from_skill()
+def _check_claude_available() -> str | None:
+    """Return None if claude CLI is usable, or a skip reason string."""
+    try:
+        result = subprocess.run(
+            ["claude", "-p", "--allowedTools", "Bash(echo test)"],
+            input="Reply with exactly: HEALTH_OK",
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if result.returncode != 0:
+            stdout = result.stdout.strip()
+            if "Credit balance" in stdout:
+                return "Anthropic API credit balance too low"
+            if "Not logged in" in stdout or "login" in stdout.lower():
+                return "Claude CLI not logged in"
+            return f"Claude CLI not usable: {stdout}"
+        return None
+    except FileNotFoundError:
+        return "Claude CLI not installed"
+    except subprocess.TimeoutExpired:
+        return "Claude CLI health check timed out"
+
+
+# Cache the check result for the session
+_claude_skip_reason: str | None | bool = False  # False = not checked yet
+
+
+def get_claude_skip_reason() -> str | None:
+    """Check once per session whether claude CLI is available."""
+    global _claude_skip_reason
+    if _claude_skip_reason is False:
+        _claude_skip_reason = _check_claude_available()
+    return _claude_skip_reason
+
+
+def run_claude_prompt(prompt: str, repo_dir: Path, timeout: int = 120) -> str:
+    """Invoke claude -p with a custom prompt. Skips if CLI not available."""
+    skip_reason = get_claude_skip_reason()
+    if skip_reason:
+        pytest.skip(skip_reason)
+
     env = {**os.environ}
-    # Allow nested claude invocation in CI / dev sessions
     env.pop("CLAUDE_CODE", None)
     env.pop("CLAUDECODE", None)
 

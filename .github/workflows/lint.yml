@@ -19,5 +19,14 @@ jobs:
       - name: Install dependencies
         run: pip install -e ".[test]"
 
+      - name: Configure git for test repos
+        run: |
+          git config --global user.email "ci@test.com"
+          git config --global user.name "CI"
+          git config --global init.defaultBranch main
+
       - name: Run schema tests
         run: pytest tests/test_schema.py -v
+
+      - name: Run trigger tests
+        run: pytest tests/test_trigger.py -v
