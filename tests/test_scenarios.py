@@ -6,12 +6,11 @@ Run explicitly:     pytest -m integration
 Skip in fast CI:    pytest -m "not integration"
 """
 
-import subprocess
-
 import pytest
 
 from tests.conftest import run_skill
 from tests.fixtures.repo_builders import (
+    build_below_threshold,
     build_no_prior_review,
     build_quality_issues_repo,
     build_threshold_met,
@@ -55,27 +54,31 @@ class TestTriggerDetectsThresholdMet:
         assert_mentions(output, "threshold", "trigger message")
 
 
+class TestTriggerBelowThreshold:
+    """Scenario 3: Only 3 commits since last review — below 20 threshold."""
+
+    def test_reports_below_threshold(self, make_test_repo):
+        repo = make_test_repo("below_threshold")
+        build_below_threshold(repo)
+        output = run_skill(repo)
+        assert_mentions(output, "below threshold", "trigger message")
+
+
 class TestQualityIssueDetection:
-    """Scenario 3: Repo with known quality anti-patterns."""
+    """Scenario 4: Repo with known quality anti-patterns.
+
+    Builds the repo once and runs the skill once, then asserts multiple
+    quality issues are detected in a single output.
+    """
 
     def test_detects_quality_issues(self, make_test_repo):
         repo = make_test_repo("quality_issues")
-        meta = build_quality_issues_repo(repo)
+        build_quality_issues_repo(repo)
         output = run_skill(repo, timeout=180)
 
         # Should flag bloom filter references (dead code)
         assert_mentions(output, "bloom", "dead code detection")
-
-    def test_flags_missing_explain(self, make_test_repo):
-        repo = make_test_repo("missing_explain")
-        meta = build_quality_issues_repo(repo)
-        output = run_skill(repo, timeout=180)
-
+        # Should mention EXPLAIN coverage gaps
         assert_mentions(output, "EXPLAIN", "missing EXPLAIN coverage")
-
-    def test_flags_exception_swallowing(self, make_test_repo):
-        repo = make_test_repo("exception_swallow")
-        meta = build_quality_issues_repo(repo)
-        output = run_skill(repo, timeout=180)
-
+        # Should flag exception-swallowing patterns
         assert_mentions(output, "exception", "exception swallowing")

@@ -76,8 +76,7 @@ def run_skill(repo_dir: Path, timeout: int = 120) -> str:
         [
             "claude", "-p",
             "--allowedTools", "Read", "Glob", "Grep",
-            "Bash(git *)", "Bash(wc *)", "Bash(grep *)",
-            "Bash(sort *)",
+            "Bash(*)", "Task",
         ],
         input=prompt,
         cwd=repo_dir,
