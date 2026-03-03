@@ -1,0 +1,52 @@
+name: Integration Tests (LLM)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: integration-tests
+  cancel-in-progress: true
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code@latest
+
+      - name: Install test dependencies
+        run: pip install -e ".[test]"
+
+      - name: Configure git for test repos
+        run: |
+          git config --global user.email "ci@test.com"
+          git config --global user.name "CI"
+          git config --global init.defaultBranch main
+
+      - name: Run integration tests
+        run: pytest tests/test_scenarios.py -v --timeout=120 -x
+        env:
+          CLAUDECODE: ""
+
+      - name: Upload test output on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output
+          path: /tmp/pytest-*

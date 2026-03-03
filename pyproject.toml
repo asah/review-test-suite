@@ -1,0 +1,18 @@
+[project]
+name = "review-test-suite"
+version = "0.1.0"
+description = "Claude Code skill: periodic test suite quality review with parallel agent dispatch"
+requires-python = ">=3.10"
+
+[project.optional-dependencies]
+test = [
+    "pytest>=8.0",
+    "pytest-timeout>=2.3",
+    "python-frontmatter>=1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: LLM-based tests requiring claude CLI and ANTHROPIC_API_KEY (deselect with '-m \"not integration\"')",
+]
